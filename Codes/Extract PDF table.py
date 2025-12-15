@@ -48,6 +48,10 @@ if "Tipe/Spesifikasi" in combined_df.columns:
         m = re.search(r"(Kapasitas Baterai[:\s]*[\d,\.]+ *kWh)", text, re.IGNORECASE)
         if not m:
             m = re.search(r"(Energy[:\s]*[\d,\.]+ *kWh)", text, re.IGNORECASE)
+        if not m:
+            m = re.search(r"(Energi[:\s]*[\d,\.]+ *kWh)", text, re.IGNORECASE)
+        if not m:
+            m = re.search(r"(Kapasitas[:\s]*[\d,\.]+ *kWh)", text, re.IGNORECASE)
         if m:
             combined_df.at[i, "Kapasitas_Baterai"] = m.group(1)
 
