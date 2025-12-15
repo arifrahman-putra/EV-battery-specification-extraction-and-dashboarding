@@ -32,46 +32,41 @@ if "Nama Perusahaan" in combined_df.columns:
         else:
             last_value = val
 
-# Make sure Tipe/Spesifikasi column exists
-if "Tipe/Spesifikasi" in combined_df.columns:
+# === Extraction based on VALUE, not prefix ===
 
-    # Create new columns
-    combined_df["Kapasitas_Baterai"] = ""
-    combined_df["Jenis_Baterai"] = ""
-    combined_df["Engine_Power"] = ""
-    combined_df["SUT"] = ""
+combined_df["Kapasitas_Baterai"] = ""
+combined_df["Engine_Power"] = ""
+combined_df["SUT"] = ""
+combined_df["Jenis_Baterai"] = ""
 
-    for i, row in combined_df.iterrows():
-        text = str(row["Tipe/Spesifikasi"]).replace("\n", " ")  # flatten line breaks
+for i, row in combined_df.iterrows():
+    text = str(row["Tipe/Spesifikasi"]).replace("\n", " ")
 
-        # 1. Extract Kapasitas Baterai / Energy
-        m = re.search(r"(Kapasitas Baterai[:\s]*[\d,\.]+ *kWh)", text, re.IGNORECASE)
-        if not m:
-            m = re.search(r"(Energy[:\s]*[\d,\.]+ *kWh)", text, re.IGNORECASE)
-        if not m:
-            m = re.search(r"(Energi[:\s]*[\d,\.]+ *kWh)", text, re.IGNORECASE)
-        if not m:
-            m = re.search(r"(Kapasitas[:\s]*[\d,\.]+ *kWh)", text, re.IGNORECASE)
-        if m:
-            combined_df.at[i, "Kapasitas_Baterai"] = m.group(1)
+    # 1. Kapasitas Baterai → number + kWh
+    m = re.search(r"\b\d+[.,]?\d*\s*kwh\b", text, re.IGNORECASE)
+    if m:
+        combined_df.at[i, "Kapasitas_Baterai"] = m.group(0)
 
-        # 2. Extract Jenis Baterai
-        m = re.search(r"(Jenis Baterai[:\s]*[^,;]+)", text, re.IGNORECASE)
-        if not m:
-            m = re.search(r"(Baterai[:\s]*[^,;]+)", text, re.IGNORECASE)
-        if m:
-            combined_df.at[i, "Jenis_Baterai"] = m.group(1)
+    # 2. Engine Power → number + kW (exclude kWh)
+    m = re.search(r"\b\d+[.,]?\d*\s*kw\b", text, re.IGNORECASE)
+    if m and "kwh" not in m.group(0).lower():
+        combined_df.at[i, "Engine_Power"] = m.group(0)
 
-        # 3. Extract Engine Power
-        m = re.search(r"\(Engine Power\)[:\s]*([^,;]+)", text, re.IGNORECASE)
-        if m:
-            combined_df.at[i, "Engine_Power"] = m.group(1)
+    # 3. SUT → KP followed by anything until space
+    m = re.search(r"\bKP[.\-/][^\s,;]+", text, re.IGNORECASE)
+    if m:
+        combined_df.at[i, "SUT"] = m.group(0)
 
-        # 4. Extract SUT / SK Variant
-        m = re.search(r"(No SUT\s*:\s*[^;]+|SUT\s*:\s*[^;]+|Nomor SUT\s*:\s*[^;]+|SK Variant\s*:\s*[^;]+)", text, re.IGNORECASE)
-        if m:
-            combined_df.at[i, "SUT"] = m.group(1)
+    # 4. Jenis Baterai (heuristic, best effort)
+    m = re.search(
+        r"\b(Lithium|Li-|LFP|LiFe)[a-zA-Z\s]{0,20}\b",
+        text,
+        re.IGNORECASE
+    )
+    if m:
+        combined_df.at[i, "Jenis_Baterai"] = m.group(0).strip()
 
-out_path = "ExtractedData\\2025kmperin5096_Cleaned_v2.xlsx"
+
+out_path = "ExtractedData\\2025kmperin5096_Cleaned_v3.xlsx"
 combined_df.to_excel(out_path, index=False)
 print("Done, data exported to", out_path)
