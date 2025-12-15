@@ -68,6 +68,6 @@ if "Tipe/Spesifikasi" in combined_df.columns:
         if m:
             combined_df.at[i, "SUT"] = m.group(1)
 
-out_path = "ExtractedData\\2025kmperin5096_Cleaned.xlsx"
+out_path = "ExtractedData\\2025kmperin5096_Cleaned_v2.xlsx"
 combined_df.to_excel(out_path, index=False)
 print("Done, data exported to", out_path)
