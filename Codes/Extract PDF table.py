@@ -1,29 +1,6 @@
+import re
 import camelot
 import pandas as pd
-import re
-
-# Assume combined_df already exists and has column "Tipe/Spesifikasi"
-def extract_specs(spec_text):
-    if pd.isna(spec_text):
-        return pd.Series([None, None, None])
-
-    # Normalize whitespace
-    spec_text = " ".join(str(spec_text).split())
-
-    # 1. Extract Kapasitas Baterai
-    baterai_match = re.search(r'Kapasitas Baterai[:\s]*([0-9.,\skWhKWh]+)', spec_text, re.IGNORECASE)
-    kapasitas_baterai = baterai_match.group(1).strip() if baterai_match else None
-
-    # 2. Extract Jenis Baterai
-    jenis_match = re.search(r',\s*Baterai[:\s]*([A-Za-z0-9\s/-]+)', spec_text, re.IGNORECASE)
-    jenis_baterai = jenis_match.group(1).strip() if jenis_match else None
-
-    # 3. Extract Engine Power
-    engine_match = re.search(r'\(Engine Power\)[:\s]*([0-9\s\w/.-]+)', spec_text, re.IGNORECASE)
-    engine_power = engine_match.group(1).strip() if engine_match else None
-
-    return pd.Series([kapasitas_baterai, jenis_baterai, engine_power])
-
 
 pdf_path = "RawData\\2025kmperin5096.pdf"
 tables = camelot.read_pdf(pdf_path, pages='all')
@@ -55,13 +32,42 @@ if "Nama Perusahaan" in combined_df.columns:
         else:
             last_value = val
 
+# Make sure Tipe/Spesifikasi column exists
+if "Tipe/Spesifikasi" in combined_df.columns:
 
-# Apply specs ectraction to the dataframe
-combined_df[['Kapasitas Baterai', 'Jenis Baterai', 'Engine Power']] = combined_df['Tipe/Spesifikasi'].apply(extract_specs)
+    # Create new columns
+    combined_df["Kapasitas_Baterai"] = ""
+    combined_df["Jenis_Baterai"] = ""
+    combined_df["Engine_Power"] = ""
+    combined_df["SUT"] = ""
 
+    for i, row in combined_df.iterrows():
+        text = str(row["Tipe/Spesifikasi"]).replace("\n", " ")  # flatten line breaks
 
-# Save the cleaned dataframe to Excel
+        # 1. Extract Kapasitas Baterai / Energy
+        m = re.search(r"(Kapasitas Baterai[:\s]*[\d,\.]+ *kWh)", text, re.IGNORECASE)
+        if not m:
+            m = re.search(r"(Energy[:\s]*[\d,\.]+ *kWh)", text, re.IGNORECASE)
+        if m:
+            combined_df.at[i, "Kapasitas_Baterai"] = m.group(1)
+
+        # 2. Extract Jenis Baterai
+        m = re.search(r"(Jenis Baterai[:\s]*[^,;]+)", text, re.IGNORECASE)
+        if not m:
+            m = re.search(r"(Baterai[:\s]*[^,;]+)", text, re.IGNORECASE)
+        if m:
+            combined_df.at[i, "Jenis_Baterai"] = m.group(1)
+
+        # 3. Extract Engine Power
+        m = re.search(r"\(Engine Power\)[:\s]*([^,;]+)", text, re.IGNORECASE)
+        if m:
+            combined_df.at[i, "Engine_Power"] = m.group(1)
+
+        # 4. Extract SUT / SK Variant
+        m = re.search(r"(No SUT\s*:\s*[^;]+|SUT\s*:\s*[^;]+|Nomor SUT\s*:\s*[^;]+|SK Variant\s*:\s*[^;]+)", text, re.IGNORECASE)
+        if m:
+            combined_df.at[i, "SUT"] = m.group(1)
+
 out_path = "ExtractedData\\2025kmperin5096_Cleaned.xlsx"
 combined_df.to_excel(out_path, index=False)
-
-print("Done, data has been exported to", out_path)
+print("Done, data exported to", out_path)
