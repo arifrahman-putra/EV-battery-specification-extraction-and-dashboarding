@@ -56,6 +56,10 @@ def normalize_battery_type(text):
     ]
 
     nmc_patterns = [
+        r"\bnmc\b",
+        r"nickel",
+        r"cobalt",
+        r"manganese",
         r"li-ion\s*polymer"
     ]
 
@@ -72,7 +76,26 @@ def normalize_battery_type(text):
             return "Li-ion (unknown)"
 
     # If nothing matched → return original cleaned string
-    return text.strip()
+    return "Unknown"
+
+
+def extract_numeric_value(text):
+    if pd.isna(text):
+        return None
+
+    t = str(text).lower()
+
+    # Find first number (integer or decimal, comma or dot)
+    m = re.search(r"\d+[.,]?\d*", t)
+    if not m:
+        return None
+
+    num_str = m.group(0).replace(",", ".")
+
+    try:
+        return float(num_str)
+    except ValueError:
+        return None
 
 
 # Automatically drop rows that are identical to the header (often repeated on each page)
@@ -132,6 +155,8 @@ combined_df = combined_df.drop(columns=["No"])
 
 combined_df["Model_Type"] = combined_df["Tipe/Spesifikasi"].apply(clean_vehicle_type)
 combined_df["Jenis_Baterai"] = (combined_df["Jenis_Baterai"].apply(normalize_battery_type))
+combined_df["Kapasitas_Baterai_kWh"] = combined_df["Kapasitas_Baterai"].apply(extract_numeric_value)
+combined_df["Engine_Power_kW"] = combined_df["Engine_Power"].apply(extract_numeric_value)
 
 
 out_path = "ExtractedData\\2025kmperin5096_Cleaned_v4.xlsx"
