@@ -13,6 +13,68 @@ combined_df = pd.concat(dfs, ignore_index=True)
 combined_df.columns = combined_df.iloc[0]
 combined_df = combined_df[1:].reset_index(drop=True)
 
+def clean_vehicle_type(text):
+    if pd.isna(text):
+        return text
+
+    text = str(text).replace("\n", " ")
+
+    m = re.search(r"^(.*?\b[AM]/T\b)", text, re.IGNORECASE)
+    if m:
+        return m.group(1).strip()
+
+    return text.strip()
+
+
+def normalize_battery_type(text):
+    if pd.isna(text):
+        return text
+
+    t = str(text).lower()
+
+    # All known LFP variants & typos
+    lfp_patterns = [
+        r"\blfp\b",
+        r"life\s*po\s*4",
+        r"lifepo4",
+        r"lifepo",
+        r"li\s*fe\s*po\s*4",
+        r"lithium\s+iron\s+phos",
+        r"lithium\s+iron\s+phosphate",
+        r"lithium\s+iron\s+graphite",
+        r"lithium\s+ion\s+lfp",
+        r"lithium\s+ferro\s+phosphate",
+        r"lfp\s+kapasitas",
+        r"pherophospat",
+    ]
+
+    liion_patterns = [
+        r"lithium\s*ion\s*battery",
+        r"li-ion\s*battery",
+        r"li-\s*ion",
+        r"li-ion",
+    ]
+
+    nmc_patterns = [
+        r"li-ion\s*polymer"
+    ]
+
+    for p in lfp_patterns:
+        if re.search(p, t):
+            return "LiFePO4"
+
+    for q in nmc_patterns:
+        if re.search(q, t):
+            return "Li(NiCoMn)O2"
+
+    for r in liion_patterns:
+        if re.search(r, t):
+            return "Li-ion (unknown)"
+
+    # If nothing matched → return original cleaned string
+    return text.strip()
+
+
 # Automatically drop rows that are identical to the header (often repeated on each page)
 drop_rows = []
 for i in range(len(combined_df)):
@@ -66,7 +128,12 @@ for i, row in combined_df.iterrows():
     if m:
         combined_df.at[i, "Jenis_Baterai"] = m.group(0).strip()
 
+combined_df = combined_df.drop(columns=["No"])
 
-out_path = "ExtractedData\\2025kmperin5096_Cleaned_v3.xlsx"
+combined_df["Model_Type"] = combined_df["Tipe/Spesifikasi"].apply(clean_vehicle_type)
+combined_df["Jenis_Baterai"] = (combined_df["Jenis_Baterai"].apply(normalize_battery_type))
+
+
+out_path = "ExtractedData\\2025kmperin5096_Cleaned_v4.xlsx"
 combined_df.to_excel(out_path, index=False)
 print("Done, data exported to", out_path)
