@@ -18,6 +18,7 @@ The extracted table from Kemenperin's regulation should be in the format:
 2. **string information parsing** by cleaning model type and extracting battery specifications from the "Type/Specs" original table column.
 
 3. **parsed table creation** with the new format:
+   
 | Manufacturer  | Model       | Battery Type   | Battery Capacity (kWh) | Engine Power (kW) |
 |---------------|-------------|----------------|------------------------|-------------------|
 | ABC LLC       | Type ABC EV | LiFePO4        | xx.x                   | xx.x              |
