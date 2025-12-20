@@ -1,0 +1,14 @@
+# Core data processing
+pandas
+numpy
+
+# PDF table extraction
+camelot-py
+
+# Regex & utilities
+regex
+
+# Visualization & dashboard
+streamlit
+plotly
+streamlit-autorefresh
