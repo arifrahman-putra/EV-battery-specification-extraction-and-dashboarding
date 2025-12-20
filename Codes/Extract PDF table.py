@@ -2,163 +2,195 @@ import re
 import camelot
 import pandas as pd
 
-pdf_path = "RawData\\2025kmperin5096.pdf"
+# === INPUT PDF PATH (user must providee) ===
+# for indonesian 4 wheelere and bus ev products, get: https://jdih.kemenperin.go.id/dokumen/view?id=1759
+initial_columns = ["Company", "Type/Specs", "Domestic Component Level", "Certification Date"]
+parsed_columns = ["Manufacturer", "Model", "Battery Type", "Battery Capacity (kWh)", "Engine Power (kW)"]
+
+pdf_path = "EV_Manufacturer_Product_Specs.pdf"
 tables = camelot.read_pdf(pdf_path, pages='all')
 
-# Combine all tables from all pages
+# Combine all tables
 dfs = [t.df for t in tables]
 combined_df = pd.concat(dfs, ignore_index=True)
 
-# Set the first row as header
+# Set first row as header
 combined_df.columns = combined_df.iloc[0]
 combined_df = combined_df[1:].reset_index(drop=True)
 
-def clean_vehicle_type(text):
+# ----------------- FUNCTIONS -----------------
+
+def clean_model_type(text):
     if pd.isna(text):
         return text
-
     text = str(text).replace("\n", " ")
-
     m = re.search(r"^(.*?\b[AM]/T\b)", text, re.IGNORECASE)
     if m:
         return m.group(1).strip()
-
     return text.strip()
 
+Battery_Types = ["LiFePO4", "Li(NiCoMn)O2", "Li-ion (unknown)", "Unknown"]
 
 def normalize_battery_type(text):
     if pd.isna(text):
-        return text
+        return "Unknown"
 
     t = str(text).lower()
 
-    # All known LFP variants & typos
     lfp_patterns = [
-        r"\blfp\b",
-        r"life\s*po\s*4",
-        r"lifepo4",
-        r"lifepo",
-        r"li\s*fe\s*po\s*4",
-        r"lithium\s+iron\s+phos",
-        r"lithium\s+iron\s+phosphate",
-        r"lithium\s+iron\s+graphite",
-        r"lithium\s+ion\s+lfp",
-        r"lithium\s+ferro\s+phosphate",
-        r"lfp\s+kapasitas",
-        r"pherophospat",
-    ]
-
-    liion_patterns = [
-        r"lithium\s*ion\s*battery",
-        r"li-ion\s*battery",
-        r"li-\s*ion",
-        r"li-ion",
+        r"\blfp\b", r"life\s*po\s*4", r"lifepo4", r"lifepo",
+        r"li\s*fe\s*po\s*4", r"lithium\s+iron\s+phos",
+        r"lithium\s+iron\s+phosphate", r"lithium\s+iron\s+graphite",
+        r"lithium\s+ion\s+lfp", r"lithium\s+ferro\s+phosphate",
     ]
 
     nmc_patterns = [
-        r"\bnmc\b",
-        r"nickel",
-        r"cobalt",
-        r"manganese",
-        r"li-ion\s*polymer"
+        r"\bnmc\b", r"nickel", r"cobalt", r"manganese", r"li-ion\s*polymer"
+    ]
+
+    liion_patterns = [
+        r"lithium\s*ion\s*battery", r"li-ion\s*battery", r"li-\s*ion", r"li-ion"
     ]
 
     for p in lfp_patterns:
         if re.search(p, t):
-            return "LiFePO4"
-
+            return Battery_Types[0]
     for q in nmc_patterns:
         if re.search(q, t):
-            return "Li(NiCoMn)O2"
-
+            return Battery_Types[1]
     for r in liion_patterns:
         if re.search(r, t):
-            return "Li-ion (unknown)"
+            return Battery_Types[2]
 
-    # If nothing matched → return original cleaned string
-    return "Unknown"
-
+    return Battery_Types[3]
 
 def extract_numeric_value(text):
     if pd.isna(text):
         return None
-
     t = str(text).lower()
-
-    # Find first number (integer or decimal, comma or dot)
     m = re.search(r"\d+[.,]?\d*", t)
     if not m:
         return None
-
     num_str = m.group(0).replace(",", ".")
-
     try:
         return float(num_str)
     except ValueError:
         return None
 
+# ----------------- DATA CLEANING -----------------
 
-# Automatically drop rows that are identical to the header (often repeated on each page)
+# Drop repeated header rows
 drop_rows = []
 for i in range(len(combined_df)):
     row = combined_df.iloc[i]
     if all(str(row[col]).strip() == str(col).strip() for col in combined_df.columns):
         drop_rows.append(i)
-
 combined_df = combined_df.drop(drop_rows).reset_index(drop=True)
 
-# Forward fill the "Nama Perusahaan" column
-if "Nama Perusahaan" in combined_df.columns:
-    last_value = ""
+# Forward fill company/manufacturer names
+if initial_columns[0] in combined_df.columns:
+    combined_df = combined_df.rename(columns={initial_columns[0]: parsed_columns[0]})
+    last_val = ""
     for i in range(len(combined_df)):
-        val = combined_df.at[i, "Nama Perusahaan"]
+        val = combined_df.at[i, parsed_columns[0]]
         if val is None or str(val).strip() == "":
-            combined_df.at[i, "Nama Perusahaan"] = last_value
+            combined_df.at[i, parsed_columns[0]] = last_val
         else:
-            last_value = val
+            last_val = val
 
-# === Extraction based on VALUE, not prefix ===
+# Rename other columns to English general names
+if initial_columns[1] in combined_df.columns:
+    # "Model" parsed column
+    combined_df = combined_df.rename(columns={initial_columns[1]: parsed_columns[1]})
 
-combined_df["Kapasitas_Baterai"] = ""
-combined_df["Engine_Power"] = ""
-combined_df["SUT"] = ""
-combined_df["Jenis_Baterai"] = ""
+
+# Create new standardized columns
+combined_df[parsed_columns[2]] = "" # "Battery Type" parsed column
+combined_df[parsed_columns[3]] = "" # "Battery Capacity (kWh)" parsed column
+combined_df[parsed_columns[4]] = "" # "Engine Power (kW)" parsed column
 
 for i, row in combined_df.iterrows():
-    text = str(row["Tipe/Spesifikasi"]).replace("\n", " ")
+    text = str(row[parsed_columns[1]]).replace("\n", " ")
 
-    # 1. Kapasitas Baterai → number + kWh
+    # Battery Type
+    m = re.search(r"\b(Lithium|Li-|LFP|LiFe)[a-zA-Z\s]{0,20}\b", text, re.IGNORECASE)
+    if m:
+        combined_df.at[i, parsed_columns[2]] = normalize_battery_type(m.group(0).strip())
+
+    # Battery Capacity
     m = re.search(r"\b\d+[.,]?\d*\s*kwh\b", text, re.IGNORECASE)
     if m:
-        combined_df.at[i, "Kapasitas_Baterai"] = m.group(0)
+        combined_df.at[i, parsed_columns[3]] = extract_numeric_value(m.group(0))
 
-    # 2. Engine Power → number + kW (exclude kWh)
+    # Engine Power
     m = re.search(r"\b\d+[.,]?\d*\s*kw\b", text, re.IGNORECASE)
     if m and "kwh" not in m.group(0).lower():
-        combined_df.at[i, "Engine_Power"] = m.group(0)
-
-    # 3. SUT → KP followed by anything until space
-    m = re.search(r"\bKP[.\-/][^\s,;]+", text, re.IGNORECASE)
-    if m:
-        combined_df.at[i, "SUT"] = m.group(0)
-
-    # 4. Jenis Baterai (heuristic, best effort)
-    m = re.search(
-        r"\b(Lithium|Li-|LFP|LiFe)[a-zA-Z\s]{0,20}\b",
-        text,
-        re.IGNORECASE
-    )
-    if m:
-        combined_df.at[i, "Jenis_Baterai"] = m.group(0).strip()
-
-combined_df = combined_df.drop(columns=["No"])
-
-combined_df["Model_Type"] = combined_df["Tipe/Spesifikasi"].apply(clean_vehicle_type)
-combined_df["Jenis_Baterai"] = (combined_df["Jenis_Baterai"].apply(normalize_battery_type))
-combined_df["Kapasitas_Baterai_kWh"] = combined_df["Kapasitas_Baterai"].apply(extract_numeric_value)
-combined_df["Engine_Power_kW"] = combined_df["Engine_Power"].apply(extract_numeric_value)
+        combined_df.at[i, parsed_columns[4]] = extract_numeric_value(m.group(0))
 
 
-out_path = "ExtractedData\\2025kmperin5096_Cleaned_v4.xlsx"
-combined_df.to_excel(out_path, index=False)
-print("Done, data exported to", out_path)
+# Clean Model Type
+combined_df[parsed_columns[1]] = combined_df[parsed_columns[1]].apply(clean_model_type)
+combined_df = combined_df[parsed_columns]
+
+# Save cleaned data
+out_path = "EV_Battery_Data_Cleaned.csv"
+combined_df.to_csv(out_path, index=False)
+print("Done! Cleaned data saved to", out_path)
+
+
+#-------- Streamlit Dashboard --------#
+import streamlit as st
+import plotly.express as px
+from streamlit_autorefresh import st_autorefresh
+
+# set up security credentials for user
+USER = "Username"
+PASS = "12345"
+
+# check for login attempts
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+# if client hasn't been logged in
+if not st.session_state.logged_in:
+    st.title("🔒 Login to Access Dashboard")
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+
+    if st.button("Login"):
+        if username == USER and password == PASS:
+            st.session_state.logged_in = True
+            st.rerun()
+        else:
+            st.error("Your username or password is incorrect.")
+
+else:
+    st.success("✅ You are logged in, welcome to the dashboard.")
+    st.header("EV battery specification analysis dashboard")
+
+    # Display data
+    st.subheader("🚗⚡️ EV Product Specification List")
+    st.dataframe(combined_df)
+
+
+    New_Manufacturers = []
+    num_bats = []
+
+    Manufacturers = combined_df[parsed_columns[0]].tolist()
+    for manufacturer in Manufacturers:
+        manufacturer_df = combined_df.loc[combined_df[parsed_columns[0]] == manufacturer]
+        for batt_type in Battery_Types:
+            batt_df = manufacturer_df.loc[manufacturer_df[parsed_columns[2]] == batt_type]
+            New_Manufacturers.append(manufacturer)
+            num_bats.append(len(batt_df))
+
+    diagram_dict = {"Manufacturer": New_Manufacturers, "Battery Type": Battery_Types, "Number": num_bats}
+    diagram_df = pd.DataFrame(diagram_dict)
+
+    st.subheader("🔋 EV Battery Type Diagram")
+    fig_trans = px.bar(diagram_df, x='Manufacturer', y='Number', color='Battery Type',
+                       color_discrete_map={Battery_Types[0]: "green",
+                                           Battery_Types[1]: "blue",
+                                           Battery_Types[2]: "yellow",
+                                           Battery_Types[3]: "red"})
+    st.plotly_chart(fig_trans, use_container_width=True)
