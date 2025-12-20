@@ -27,3 +27,14 @@ The extracted table from Kemenperin's regulation should be in the format:
 4. **parsed table saving** into a csv file (EV_Battery_Data_Cleaned.csv)
 
 5. **dashboard visualization** using streamlit, by providing for parsed table and plotting the number of each EV battery type in each manufacturer.  
+
+## 📦 Files in This Repo
+
+| File                              | Description                      |
+|-----------------------------------|----------------------------------|
+| `Codes/DNN_Extract PDF table.py`  | Main script of the system        |
+| `requirements.txt`                | Python package dependencies      |     
+| `README.md`                       | This documentation               |
+| `.gitignore`                      | untracked files and directories  |
+
+
