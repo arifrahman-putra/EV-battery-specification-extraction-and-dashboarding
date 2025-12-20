@@ -38,3 +38,25 @@ The extracted table from Kemenperin's regulation should be in the format:
 | `.gitignore`                      | untracked files and directories  |
 
 
+## 🏁 How to Run
+
+1. Clone the repo:
+   ```bash
+   git clone https://github.com/arifrahman-putra/EV-battery-specification-extraction-and-dashboarding.git
+
+2. Switch to the correct branch:
+   ```bash
+   git checkout Github_version
+
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+
+4. Run the dashboard:
+   ```bash
+   streamlit run "Codes/DNN_Extract PDF table.py"
+
+
+
+
+
