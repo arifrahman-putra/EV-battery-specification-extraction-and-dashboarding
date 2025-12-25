@@ -141,7 +141,7 @@ print("Done! Cleaned data saved to", out_path)
 #-------- Streamlit Dashboard --------#
 import streamlit as st
 import plotly.express as px
-from streamlit_autorefresh import st_autorefresh
+# REMOVED: from streamlit_autorefresh import st_autorefresh
 
 # set up security credentials for user
 USER = "Username"
@@ -166,31 +166,52 @@ if not st.session_state.logged_in:
 
 else:
     st.success("✅ You are logged in, welcome to the dashboard.")
-    st.header("EV battery specification analysis dashboard")
+    st.header("EV Battery Specification Analysis Dashboard")
 
     # Display data
     st.subheader("🚗⚡️ EV Product Specification List")
     st.dataframe(combined_df)
 
-
-    New_Manufacturers = []
-    num_bats = []
-
-    Manufacturers = combined_df[parsed_columns[0]].tolist()
-    for manufacturer in Manufacturers:
-        manufacturer_df = combined_df.loc[combined_df[parsed_columns[0]] == manufacturer]
+    # ============================================
+    # FIXED BATTERY TYPE DIAGRAM LOGIC
+    # ============================================
+    
+    # Get UNIQUE manufacturers only
+    unique_manufacturers = combined_df[parsed_columns[0]].unique()
+    
+    # Build diagram data correctly
+    diagram_data = []
+    
+    for manufacturer in unique_manufacturers:  # ✅ Only loop through unique manufacturers
+        manufacturer_df = combined_df[combined_df[parsed_columns[0]] == manufacturer]
+        
         for batt_type in Battery_Types:
-            batt_df = manufacturer_df.loc[manufacturer_df[parsed_columns[2]] == batt_type]
-            New_Manufacturers.append(manufacturer)
-            num_bats.append(len(batt_df))
+            # Count batteries of this type for this manufacturer
+            count = len(manufacturer_df[manufacturer_df[parsed_columns[2]] == batt_type])
+            
+            # Append as dictionary (cleaner approach)
+            diagram_data.append({
+                "Manufacturer": manufacturer,
+                "Battery Type": batt_type,
+                "Number": count
+            })
+    
+    # Create DataFrame from list of dictionaries
+    diagram_df = pd.DataFrame(diagram_data)
 
-    diagram_dict = {"Manufacturer": New_Manufacturers, "Battery Type": Battery_Types, "Number": num_bats}
-    diagram_df = pd.DataFrame(diagram_dict)
-
-    st.subheader("🔋 EV Battery Type Diagram")
-    fig_trans = px.bar(diagram_df, x='Manufacturer', y='Number', color='Battery Type',
-                       color_discrete_map={Battery_Types[0]: "green",
-                                           Battery_Types[1]: "blue",
-                                           Battery_Types[2]: "yellow",
-                                           Battery_Types[3]: "red"})
+    # Display chart
+    st.subheader("🔋 EV Battery Type Distribution by Manufacturer")
+    fig_trans = px.bar(
+        diagram_df, 
+        x='Manufacturer', 
+        y='Number', 
+        color='Battery Type',
+        color_discrete_map={
+            Battery_Types[0]: "green",
+            Battery_Types[1]: "blue",
+            Battery_Types[2]: "yellow",
+            Battery_Types[3]: "red"
+        },
+        title="Battery Types by Manufacturer"
+    )
     st.plotly_chart(fig_trans, use_container_width=True)
