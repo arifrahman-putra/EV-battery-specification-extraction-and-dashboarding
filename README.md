@@ -26,7 +26,8 @@ The extracted table from Kemenperin's regulation should be in the format:
 
 4. **parsed table saving** into a csv file (EV_Battery_Data_Cleaned.csv)
 
-5. **dashboard visualization** using streamlit, by providing for parsed table and plotting the number of each EV battery type in each manufacturer.  
+5. **dashboard visualization** using streamlit, by providing for parsed table and plotting the number of each EV battery type in each manufacturer.
+   ![Streamlit Dashboard](Dashboard_Streamlit.png)
 
 ## 📦 Files in This Repo
 
