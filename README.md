@@ -30,12 +30,9 @@ The extracted table from Kemenperin's regulation should be in the format:
 
 ![Streamlit Dashboard](Streamlit_Dashboard.svg)
 
-
-
 or a Power BI as an alternative:
 
-
-![Power BI Dashboard](Power BI_Dashboard.svg)
+![Power BI Dashboard](PowerBI_Dashboard.svg)
 
 
 ## 📦 Files in This Repo
