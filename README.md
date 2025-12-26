@@ -2,7 +2,7 @@
 
 This is a data engineering process to extract important Electric Vehicle (EV) battery information (EV Manufacturer, model, battery type, battery capacity, engine power) from a text-based pdf table (obtained from a governmental/ministry tax/domestic component level listing document), and visualize the results in a streamlit dashboard with user credential operations, for climate-based policy making purposes.
 
-The actual pdf source is not included to prevent copyright restrictions. please download at Kemenperin's official regulation website: https://jdih.kemenperin.go.id/dokumen/view?id=1759 for Indonesian opensource legal document to provide for EV_Manufacturer_Product_Specs.pdf
+The actual pdf source is not included to prevent copyright restrictions. please download at Indonesian Ministry of Industry (Kemenperin)'s official regulation website: https://jdih.kemenperin.go.id/dokumen/view?id=1759 for Indonesian opensource legal document to provide for EV_Manufacturer_Product_Specs.pdf
 
 ## 🔍 Overview
 
