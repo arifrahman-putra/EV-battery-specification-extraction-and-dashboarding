@@ -28,7 +28,7 @@ The extracted table from Kemenperin's regulation should be in the format:
 
 5. **dashboard visualization** using streamlit, by providing for parsed table and plotting the number of each EV battery type in each manufacturer.
 
-![Streamlit Dashboard](Streamlit_Dashboard.png)
+![Streamlit Dashboard](Streamlit_Dashboard.svg)
 
 ## 📦 Files in This Repo
 
